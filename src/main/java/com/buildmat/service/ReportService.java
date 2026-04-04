@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 @Service @RequiredArgsConstructor
 public class ReportService {
     private final com.buildmat.dao.ReportQueryService qSvc;
+    private final SettingsService settingsService;
 
     public Object salesSummary(String from, String to) { return qSvc.salesSummary(from,to); }
     public Object outstanding(String asOf) { return qSvc.outstanding(asOf); }
@@ -26,7 +27,7 @@ public class ReportService {
 
     public ResponseEntity<byte[]> exportPdf(String type, String from, String to, String asOf) {
         try {
-            byte[] data = PdfExportUtil.exportReport(type, from, to, asOf, qSvc);
+            byte[] data = PdfExportUtil.exportReport(type, from, to, asOf, qSvc, settingsService.get().getBusinessName());
             return ResponseEntity.ok().header("Content-Disposition","attachment; filename="+type+".pdf")
                 .contentType(MediaType.APPLICATION_PDF).body(data);
         } catch (Exception e) { throw new RuntimeException(e); }

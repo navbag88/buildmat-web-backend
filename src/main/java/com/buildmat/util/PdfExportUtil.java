@@ -2,6 +2,7 @@ package com.buildmat.util;
 
 import com.buildmat.dao.ReportQueryService;
 import com.buildmat.model.*;
+import com.buildmat.model.SettingsEntity;
 import com.itextpdf.kernel.colors.*;
 import com.itextpdf.kernel.font.*;
 import com.itextpdf.kernel.geom.PageSize;
@@ -29,18 +30,33 @@ public class PdfExportUtil {
     private static final NumberFormat INR  = NumberFormat.getCurrencyInstance(new Locale("en","IN"));
 
     // ── Invoice PDF ────────────────────────────────────────────────────────────
-    public static byte[] generateInvoicePdf(InvoiceEntity inv) throws Exception {
+    public static byte[] generateInvoicePdf(InvoiceEntity inv, SettingsEntity settings) throws Exception {
+        String bizName   = (settings != null && settings.getBusinessName() != null && !settings.getBusinessName().isBlank())
+                            ? settings.getBusinessName() : "My Business";
+        String tagLine   = (settings != null && settings.getTagLine()  != null) ? settings.getTagLine()  : "";
+        String gstNumber = (settings != null && settings.getGstNumber()!= null) ? settings.getGstNumber(): "";
+        String phone     = (settings != null && settings.getPhone()    != null) ? settings.getPhone()    : "";
+        String email     = (settings != null && settings.getEmail()    != null) ? settings.getEmail()    : "";
+
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         Document doc = new Document(new PdfDocument(new PdfWriter(bos)), PageSize.A4);
         doc.setMargins(36,40,36,40);
         PdfFont bold = bold(), reg = reg();
 
+        // Build subtitle line for business
+        StringBuilder subLine = new StringBuilder();
+        if (!tagLine.isBlank())   subLine.append(tagLine);
+        if (!gstNumber.isBlank()) { if (subLine.length()>0) subLine.append(" | "); subLine.append("GST No: ").append(gstNumber); }
+        StringBuilder contactLine = new StringBuilder();
+        if (!phone.isBlank()) contactLine.append("Ph: ").append(phone);
+        if (!email.isBlank()) { if (contactLine.length()>0) contactLine.append(" | "); contactLine.append(email); }
+
         // Header
         Table ht = new Table(UnitValue.createPercentArray(new float[]{60,40})).useAllAvailableWidth().setBorder(Border.NO_BORDER);
         Cell lc = new Cell().setBorder(Border.NO_BORDER);
-        lc.add(new Paragraph("BuildMat Supplies").setFont(bold).setFontSize(18).setFontColor(BRAND));
-        lc.add(new Paragraph("Building Material Supplier | GST No: 27ABCDE1234F1Z5").setFont(reg).setFontSize(9).setFontColor(MIDGRAY));
-        lc.add(new Paragraph("Ph: +91 98765 43210 | billing@buildmat.in").setFont(reg).setFontSize(9).setFontColor(MIDGRAY));
+        lc.add(new Paragraph(bizName).setFont(bold).setFontSize(18).setFontColor(BRAND));
+        if (subLine.length()>0)     lc.add(new Paragraph(subLine.toString()).setFont(reg).setFontSize(9).setFontColor(MIDGRAY));
+        if (contactLine.length()>0) lc.add(new Paragraph(contactLine.toString()).setFont(reg).setFontSize(9).setFontColor(MIDGRAY));
         Cell rc = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.RIGHT);
         rc.add(new Paragraph("TAX INVOICE").setFont(bold).setFontSize(20).setFontColor(DARK));
         rc.add(new Paragraph(inv.getInvoiceNumber()).setFont(bold).setFontSize(13).setFontColor(BRAND));
@@ -112,29 +128,29 @@ public class PdfExportUtil {
 
         // Footer
         doc.add(new LineSeparator(new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(0.5f)).setMarginTop(8).setMarginBottom(4));
-        doc.add(new Paragraph("Thank you for your business! This is a computer-generated invoice.")
+        doc.add(new Paragraph("Thank you for your business with " + bizName + "! This is a computer-generated invoice.")
             .setFont(reg).setFontSize(7).setFontColor(MIDGRAY).setTextAlignment(TextAlignment.CENTER));
         doc.close(); return bos.toByteArray();
     }
 
     // ── Export lists ───────────────────────────────────────────────────────────
-    public static byte[] exportCustomers(java.util.List<CustomerEntity> list) throws Exception {
-        return simpleListPdf("Customers", "Total: "+list.size(), false,
+    public static byte[] exportCustomers(java.util.List<CustomerEntity> list, String bizName) throws Exception {
+        return simpleListPdf(bizName, "Customers", "Total: "+list.size(), false,
             new String[]{"#","Name","Phone","Email","Address"},
             new float[]{6,26,15,22,31},
             list.stream().map(c -> new String[]{c.getId().toString(),c.getName(),nvl(c.getPhone()),nvl(c.getEmail()),nvl(c.getAddress())}).collect(Collectors.toList()));
     }
 
-    public static byte[] exportProducts(java.util.List<ProductEntity> list) throws Exception {
-        return simpleListPdf("Products", "Total: "+list.size(), true,
+    public static byte[] exportProducts(java.util.List<ProductEntity> list, String bizName) throws Exception {
+        return simpleListPdf(bizName, "Products", "Total: "+list.size(), true,
             new String[]{"#","Name","Category","Unit","Price","Stock","SGST%","CGST%"},
             new float[]{4,26,14,8,12,10,8,8},
             list.stream().map(p -> new String[]{p.getId().toString(),p.getName(),nvl(p.getCategory()),nvl(p.getUnit()),
                 INR.format(p.getPrice()),fmt(p.getStockQty()),p.getSgstPercent()+"%",p.getCgstPercent()+"%"}).collect(Collectors.toList()));
     }
 
-    public static byte[] exportInvoices(java.util.List<InvoiceEntity> list) throws Exception {
-        return simpleListPdf("Invoices", "Total: "+list.size(), true,
+    public static byte[] exportInvoices(java.util.List<InvoiceEntity> list, String bizName) throws Exception {
+        return simpleListPdf(bizName, "Invoices", "Total: "+list.size(), true,
             new String[]{"Invoice #","Customer","Date","Total","Paid","Balance","Status"},
             new float[]{14,20,10,13,12,13,8},
             list.stream().map(i -> new String[]{i.getInvoiceNumber(),i.getCustomer()!=null?i.getCustomer().getName():"",
@@ -142,8 +158,8 @@ public class PdfExportUtil {
                 INR.format(i.getTotalAmount()-i.getPaidAmount()),i.getStatus()}).collect(Collectors.toList()));
     }
 
-    public static byte[] exportPayments(java.util.List<PaymentEntity> list) throws Exception {
-        return simpleListPdf("Payments", "Total: "+list.size(), true,
+    public static byte[] exportPayments(java.util.List<PaymentEntity> list, String bizName) throws Exception {
+        return simpleListPdf(bizName, "Payments", "Total: "+list.size(), true,
             new String[]{"Date","Invoice #","Customer","Amount","Method","Reference"},
             new float[]{12,15,22,15,12,24},
             list.stream().map(p -> new String[]{p.getPaymentDate().toString(),
@@ -151,11 +167,11 @@ public class PdfExportUtil {
                 INR.format(p.getAmount()),nvl(p.getMethod()),nvl(p.getReference())}).collect(Collectors.toList()));
     }
 
-    public static byte[] exportReport(String type, String from, String to, String asOf, ReportQueryService q) throws Exception {
+    public static byte[] exportReport(String type, String from, String to, String asOf, ReportQueryService q, String bizName) throws Exception {
         return switch (type) {
             case "outstanding" -> {
                 var rows = q.outstanding(asOf);
-                yield simpleListPdf("Outstanding Invoices","As of "+asOf,true,
+                yield simpleListPdf(bizName, "Outstanding Invoices","As of "+asOf,true,
                     new String[]{"Invoice #","Customer","Balance Due","Status","Days Overdue"},
                     new float[]{18,22,18,12,10},
                     rows.stream().map(r -> new String[]{s(r,"invoice_number"),s(r,"customer_name"),
@@ -163,7 +179,7 @@ public class PdfExportUtil {
             }
             case "customer-sales" -> {
                 var rows = q.customerSales(from,to);
-                yield simpleListPdf("Customer Sales",from+" to "+to,true,
+                yield simpleListPdf(bizName, "Customer Sales",from+" to "+to,true,
                     new String[]{"Customer","Phone","Invoices","Total Amount","Paid","Outstanding"},
                     new float[]{24,14,10,16,14,14},
                     rows.stream().map(r -> new String[]{s(r,"customer_name"),s(r,"phone"),s(r,"invoice_count"),
@@ -171,7 +187,7 @@ public class PdfExportUtil {
             }
             case "product-sales" -> {
                 var rows = q.productSales(from,to);
-                yield simpleListPdf("Product Sales",from+" to "+to,true,
+                yield simpleListPdf(bizName, "Product Sales",from+" to "+to,true,
                     new String[]{"Product","Category","Total Qty","Total Sales","GST"},
                     new float[]{28,16,14,22,16},
                     rows.stream().map(r -> new String[]{s(r,"product_name"),s(r,"category"),s(r,"total_qty"),
@@ -181,7 +197,7 @@ public class PdfExportUtil {
         };
     }
 
-    private static byte[] simpleListPdf(String title, String subtitle, boolean landscape,
+    private static byte[] simpleListPdf(String bizName, String title, String subtitle, boolean landscape,
                                          String[] cols, float[] widths, java.util.List<String[]> rows) throws Exception {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         PageSize ps = landscape ? PageSize.A4.rotate() : PageSize.A4;
@@ -190,7 +206,7 @@ public class PdfExportUtil {
         PdfFont bold = bold(), reg = reg();
 
         // Header
-        doc.add(new Paragraph("BuildMat Supplies — " + title + " | " + subtitle)
+        doc.add(new Paragraph(bizName + " — " + title + " | " + subtitle)
             .setFont(bold).setFontSize(14).setFontColor(BRAND).setMarginBottom(4));
         doc.add(new LineSeparator(new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(1)).setMarginBottom(8));
 
@@ -206,7 +222,7 @@ public class PdfExportUtil {
         }
         doc.add(t);
         doc.add(new LineSeparator(new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(0.5f)).setMarginTop(8));
-        doc.add(new Paragraph("BuildMat Billing — Computer generated").setFont(reg).setFontSize(7).setFontColor(MIDGRAY).setTextAlignment(TextAlignment.CENTER));
+        doc.add(new Paragraph(bizName + " — Computer generated").setFont(reg).setFontSize(7).setFontColor(MIDGRAY).setTextAlignment(TextAlignment.CENTER));
         doc.close(); return bos.toByteArray();
     }
 

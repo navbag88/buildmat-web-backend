@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 @Service @RequiredArgsConstructor
 public class CustomerService {
     private final CustomerRepository repo;
+    private final SettingsService settingsService;
 
     public List<Map<String,Object>> getAll(String q) {
         List<CustomerEntity> list = (q == null || q.isBlank()) ? repo.findAll() :
@@ -63,8 +64,15 @@ public class CustomerService {
 
     public ResponseEntity<byte[]> exportPdf() {
         try {
-            byte[] data = PdfExportUtil.exportCustomers(repo.findAll());
+            byte[] data = PdfExportUtil.exportCustomers(repo.findAll(), settingsService.get().getBusinessName());
             return download(data, "customers.pdf", "application/pdf");
+        } catch (Exception e) { throw new RuntimeException(e); }
+    }
+
+    public ResponseEntity<byte[]> importTemplate() {
+        try {
+            byte[] data = ExcelImportUtil.generateCustomerTemplate();
+            return download(data, "customers-import-template.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         } catch (Exception e) { throw new RuntimeException(e); }
     }
 

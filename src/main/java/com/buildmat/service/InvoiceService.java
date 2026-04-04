@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.buildmat.service.SettingsService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,6 +19,7 @@ public class InvoiceService {
     private final InvoiceRepository invoiceRepo;
     private final CustomerRepository customerRepo;
     private final PaymentRepository paymentRepo;
+    private final SettingsService settingsService;
 
     @SuppressWarnings("unchecked")
     public Map<String,Object> save(Long id, Map<String,Object> body) {
@@ -83,7 +85,7 @@ public class InvoiceService {
 
     public ResponseEntity<byte[]> generatePdf(Long id) {
         try { InvoiceEntity inv = invoiceRepo.findById(id).orElseThrow();
-            byte[] pdf = PdfExportUtil.generateInvoicePdf(inv);
+            byte[] pdf = PdfExportUtil.generateInvoicePdf(inv, settingsService.get());
             return ResponseEntity.ok().header("Content-Disposition","attachment; filename="+inv.getInvoiceNumber()+".pdf")
                 .contentType(MediaType.APPLICATION_PDF).body(pdf); }
         catch (Exception e) { throw new RuntimeException(e); }
@@ -97,7 +99,7 @@ public class InvoiceService {
     }
 
     public ResponseEntity<byte[]> exportPdf() {
-        try { byte[] d = PdfExportUtil.exportInvoices(invoiceRepo.findByOrderByInvoiceDateDescIdDesc());
+        try { byte[] d = PdfExportUtil.exportInvoices(invoiceRepo.findByOrderByInvoiceDateDescIdDesc(), settingsService.get().getBusinessName());
             return ResponseEntity.ok().header("Content-Disposition","attachment; filename=invoices.pdf")
                 .contentType(MediaType.APPLICATION_PDF).body(d); }
         catch (Exception e) { throw new RuntimeException(e); }

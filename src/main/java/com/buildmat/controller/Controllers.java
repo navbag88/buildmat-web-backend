@@ -60,6 +60,9 @@ class CustomerController {
     @PostMapping("/import")
     public ResponseEntity<?> importExcel(@RequestParam("file") MultipartFile file) { return ResponseEntity.ok(svc.importExcel(file)); }
 
+    @GetMapping("/import/template")
+    public ResponseEntity<byte[]> importTemplate() { return svc.importTemplate(); }
+
     @GetMapping("/export/excel")
     public ResponseEntity<byte[]> exportExcel() { return svc.exportExcel(); }
 
@@ -81,6 +84,9 @@ class ProductController {
 
     @PostMapping("/import")
     public ResponseEntity<?> importExcel(@RequestParam("file") MultipartFile file) { return ResponseEntity.ok(svc.importExcel(file)); }
+
+    @GetMapping("/import/template")
+    public ResponseEntity<byte[]> importTemplate() { return svc.importTemplate(); }
 
     @GetMapping("/export/excel")
     public ResponseEntity<byte[]> exportExcel() { return svc.exportExcel(); }
@@ -157,4 +163,17 @@ class UserController {
     @PutMapping("/{id}") public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String,Object> body) { return ResponseEntity.ok(svc.update(id, body)); }
     @PutMapping("/{id}/password") public ResponseEntity<?> changePassword(@PathVariable Long id, @RequestBody Map<String,String> body) { svc.changePassword(id, body.get("password")); return ResponseEntity.ok(Map.of("ok",true)); }
     @DeleteMapping("/{id}") public ResponseEntity<?> delete(@PathVariable Long id) { svc.delete(id); return ResponseEntity.ok(Map.of("ok",true)); }
+}
+
+// ═══ Settings Controller ══════════════════════════════════════════════════════
+@RestController @RequestMapping("/api/settings")
+@RequiredArgsConstructor
+class SettingsController {
+    private final com.buildmat.service.SettingsService svc;
+
+    @GetMapping
+    public ResponseEntity<?> get() { return ResponseEntity.ok(svc.get()); }
+
+    @PutMapping
+    public ResponseEntity<?> update(@RequestBody Map<String,Object> body) { return ResponseEntity.ok(svc.update(body)); }
 }

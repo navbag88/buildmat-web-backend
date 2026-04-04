@@ -1,12 +1,103 @@
 package com.buildmat.util;
 
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.*;
 
 public class ExcelImportUtil {
+
+    // ── Template generators ────────────────────────────────────────────────────
+
+    public static byte[] generateCustomerTemplate() throws Exception {
+        try (Workbook wb = new XSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("Customers");
+            CellStyle headerStyle = headerStyle(wb);
+            CellStyle noteStyle   = noteStyle(wb);
+            Row header = sheet.createRow(0);
+            String[] cols = {"Name *", "Phone", "Email", "Address"};
+            for (int i = 0; i < cols.length; i++) {
+                Cell c = header.createCell(i);
+                c.setCellValue(cols[i]);
+                c.setCellStyle(headerStyle);
+                sheet.setColumnWidth(i, 6000);
+            }
+            // Sample row
+            Row sample = sheet.createRow(1);
+            sample.createCell(0).setCellValue("John Doe");
+            sample.createCell(1).setCellValue("9876543210");
+            sample.createCell(2).setCellValue("john@example.com");
+            sample.createCell(3).setCellValue("123, Main Street, City");
+            // Notes row
+            Row note = sheet.createRow(3);
+            Cell nc = note.createCell(0);
+            nc.setCellValue("* Name is required. Row 2 is a sample - replace or delete it.");
+            nc.setCellStyle(noteStyle);
+            sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(3, 3, 0, 3));
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            wb.write(bos);
+            return bos.toByteArray();
+        }
+    }
+
+    public static byte[] generateProductTemplate() throws Exception {
+        try (Workbook wb = new XSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("Products");
+            CellStyle headerStyle = headerStyle(wb);
+            CellStyle noteStyle   = noteStyle(wb);
+            Row header = sheet.createRow(0);
+            String[] cols = {"Name *", "Category", "Unit", "Price *", "Stock Qty", "SGST %", "CGST %"};
+            int[] widths  = {6000, 5000, 4000, 4000, 4000, 3500, 3500};
+            for (int i = 0; i < cols.length; i++) {
+                Cell c = header.createCell(i);
+                c.setCellValue(cols[i]);
+                c.setCellStyle(headerStyle);
+                sheet.setColumnWidth(i, widths[i]);
+            }
+            // Sample row
+            Row sample = sheet.createRow(1);
+            sample.createCell(0).setCellValue("Cement OPC 53");
+            sample.createCell(1).setCellValue("Cement");
+            sample.createCell(2).setCellValue("Bag");
+            sample.createCell(3).setCellValue(350.00);
+            sample.createCell(4).setCellValue(100);
+            sample.createCell(5).setCellValue(9);
+            sample.createCell(6).setCellValue(9);
+            // Notes row
+            Row note = sheet.createRow(3);
+            Cell nc = note.createCell(0);
+            nc.setCellValue("* Name and Price (> 0) are required. Row 2 is a sample - replace or delete it.");
+            nc.setCellStyle(noteStyle);
+            sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(3, 3, 0, 6));
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            wb.write(bos);
+            return bos.toByteArray();
+        }
+    }
+
+    private static CellStyle headerStyle(Workbook wb) {
+        CellStyle s = wb.createCellStyle();
+        Font f = wb.createFont();
+        f.setBold(true);
+        f.setColor(IndexedColors.WHITE.getIndex());
+        s.setFont(f);
+        s.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
+        s.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        s.setAlignment(HorizontalAlignment.CENTER);
+        return s;
+    }
+
+    private static CellStyle noteStyle(Workbook wb) {
+        CellStyle s = wb.createCellStyle();
+        Font f = wb.createFont();
+        f.setItalic(true);
+        f.setColor(IndexedColors.GREY_50_PERCENT.getIndex());
+        s.setFont(f);
+        return s;
+    }
 
     public static List<Map<String,Object>> importCustomers(InputStream is) throws Exception {
         List<Map<String,Object>> result = new ArrayList<>();

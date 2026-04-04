@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 public class PaymentService {
     private final PaymentRepository paymentRepo;
     private final InvoiceRepository invoiceRepo;
+    private final SettingsService settingsService;
 
     public List<Map<String,Object>> getAll() {
         return paymentRepo.findByOrderByPaymentDateDescIdDesc().stream().map(this::toMap).collect(Collectors.toList());
@@ -66,7 +67,7 @@ public class PaymentService {
     }
 
     public ResponseEntity<byte[]> exportPdf() {
-        try { byte[] d = PdfExportUtil.exportPayments(paymentRepo.findByOrderByPaymentDateDescIdDesc());
+        try { byte[] d = PdfExportUtil.exportPayments(paymentRepo.findByOrderByPaymentDateDescIdDesc(), settingsService.get().getBusinessName());
             return ResponseEntity.ok().header("Content-Disposition","attachment; filename=payments.pdf")
                 .contentType(MediaType.APPLICATION_PDF).body(d); }
         catch (Exception e) { throw new RuntimeException(e); }

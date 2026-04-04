@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 @Service @RequiredArgsConstructor
 public class ProductService {
     private final ProductRepository repo;
+    private final SettingsService settingsService;
 
     public List<Map<String,Object>> getAll(String q) {
         List<ProductEntity> list = (q == null || q.isBlank()) ? repo.findAll() :
@@ -64,7 +65,12 @@ public class ProductService {
     }
 
     public ResponseEntity<byte[]> exportPdf() {
-        try { byte[] d = PdfExportUtil.exportProducts(repo.findAll()); return dl(d,"products.pdf","application/pdf"); }
+        try { byte[] d = PdfExportUtil.exportProducts(repo.findAll(), settingsService.get().getBusinessName()); return dl(d,"products.pdf","application/pdf"); }
+        catch (Exception e) { throw new RuntimeException(e); }
+    }
+
+    public ResponseEntity<byte[]> importTemplate() {
+        try { byte[] d = ExcelImportUtil.generateProductTemplate(); return dl(d,"products-import-template.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); }
         catch (Exception e) { throw new RuntimeException(e); }
     }
 
