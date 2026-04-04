@@ -159,10 +159,33 @@ class UserController {
     private final UserService svc;
 
     @GetMapping    public ResponseEntity<?> getAll() { return ResponseEntity.ok(svc.getAll()); }
-    @PostMapping   public ResponseEntity<?> create(@RequestBody Map<String,Object> body) { return ResponseEntity.ok(svc.create(body)); }
-    @PutMapping("/{id}") public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String,Object> body) { return ResponseEntity.ok(svc.update(id, body)); }
-    @PutMapping("/{id}/password") public ResponseEntity<?> changePassword(@PathVariable Long id, @RequestBody Map<String,String> body) { svc.changePassword(id, body.get("password")); return ResponseEntity.ok(Map.of("ok",true)); }
+
+    @PostMapping
+    public ResponseEntity<?> create(@RequestBody Map<String,Object> body,
+                                    org.springframework.security.core.Authentication auth) {
+        try { return ResponseEntity.ok(svc.create(body, callerRole(auth))); }
+        catch (RuntimeException e) { return ResponseEntity.status(403).body(Map.of("error", e.getMessage())); }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String,Object> body,
+                                    org.springframework.security.core.Authentication auth) {
+        try { return ResponseEntity.ok(svc.update(id, body, callerRole(auth))); }
+        catch (RuntimeException e) { return ResponseEntity.status(403).body(Map.of("error", e.getMessage())); }
+    }
+
+    @PutMapping("/{id}/password")
+    public ResponseEntity<?> changePassword(@PathVariable Long id, @RequestBody Map<String,String> body) {
+        svc.changePassword(id, body.get("password")); return ResponseEntity.ok(Map.of("ok", true));
+    }
+
     @DeleteMapping("/{id}") public ResponseEntity<?> delete(@PathVariable Long id) { svc.delete(id); return ResponseEntity.ok(Map.of("ok",true)); }
+
+    private String callerRole(org.springframework.security.core.Authentication auth) {
+        if (auth == null) return "USER";
+        return auth.getAuthorities().stream().findFirst()
+            .map(a -> a.getAuthority().replace("ROLE_", "")).orElse("USER");
+    }
 }
 
 // ═══ Settings Controller ══════════════════════════════════════════════════════
@@ -172,8 +195,38 @@ class SettingsController {
     private final com.buildmat.service.SettingsService svc;
 
     @GetMapping
-    public ResponseEntity<?> get() { return ResponseEntity.ok(svc.get()); }
+    public ResponseEntity<?> get() {
+        com.buildmat.model.SettingsEntity s = svc.get();
+        Map<String,Object> r = new java.util.LinkedHashMap<>();
+        r.put("businessName", s.getBusinessName());
+        r.put("tagLine",      s.getTagLine());
+        r.put("gstNumber",    s.getGstNumber());
+        r.put("phone",        s.getPhone());
+        r.put("email",        s.getEmail());
+        r.put("address",      s.getAddress());
+        r.put("hasLogo",      s.getLogoData() != null && s.getLogoData().length > 0);
+        return ResponseEntity.ok(r);
+    }
 
     @PutMapping
     public ResponseEntity<?> update(@RequestBody Map<String,Object> body) { return ResponseEntity.ok(svc.update(body)); }
+
+    @PostMapping("/logo")
+    public ResponseEntity<?> uploadLogo(@RequestParam("file") MultipartFile file) throws Exception {
+        if (file.isEmpty()) return ResponseEntity.badRequest().body(Map.of("error","No file provided"));
+        svc.saveLogo(file.getBytes(), file.getContentType());
+        return ResponseEntity.ok(Map.of("ok", true));
+    }
+
+    @DeleteMapping("/logo")
+    public ResponseEntity<?> removeLogo() { svc.removeLogo(); return ResponseEntity.ok(Map.of("ok", true)); }
+
+    @GetMapping("/logo")
+    public ResponseEntity<byte[]> getLogo() {
+        com.buildmat.model.SettingsEntity s = svc.get();
+        if (s.getLogoData() == null || s.getLogoData().length == 0)
+            return ResponseEntity.notFound().build();
+        String ct = s.getLogoContentType() != null ? s.getLogoContentType() : "image/png";
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(ct)).body(s.getLogoData());
+    }
 }

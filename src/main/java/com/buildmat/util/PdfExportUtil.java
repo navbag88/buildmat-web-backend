@@ -54,6 +54,14 @@ public class PdfExportUtil {
         // Header
         Table ht = new Table(UnitValue.createPercentArray(new float[]{60,40})).useAllAvailableWidth().setBorder(Border.NO_BORDER);
         Cell lc = new Cell().setBorder(Border.NO_BORDER);
+        if (settings != null && settings.getLogoData() != null && settings.getLogoData().length > 0) {
+            try {
+                com.itextpdf.io.image.ImageData imgData =
+                    com.itextpdf.io.image.ImageDataFactory.create(settings.getLogoData());
+                Image logo = new Image(imgData).setHeight(52).setAutoScaleWidth(true).setMarginBottom(5);
+                lc.add(logo);
+            } catch (Exception ignored) {}
+        }
         lc.add(new Paragraph(bizName).setFont(bold).setFontSize(18).setFontColor(BRAND));
         if (subLine.length()>0)     lc.add(new Paragraph(subLine.toString()).setFont(reg).setFontSize(9).setFontColor(MIDGRAY));
         if (contactLine.length()>0) lc.add(new Paragraph(contactLine.toString()).setFont(reg).setFontSize(9).setFontColor(MIDGRAY));

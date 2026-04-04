@@ -1,5 +1,6 @@
 package com.buildmat.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -28,4 +29,13 @@ public class SettingsEntity {
 
     @Column(name = "address", length = 500)
     private String address = "";
+
+    @JsonIgnore
+    @Lob
+    @Column(name = "logo_data")
+    private byte[] logoData;
+
+    @JsonIgnore
+    @Column(name = "logo_content_type", length = 50)
+    private String logoContentType;
 }

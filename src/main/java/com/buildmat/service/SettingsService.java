@@ -38,5 +38,19 @@ public class SettingsService {
         return repo.save(s);
     }
 
+    public SettingsEntity saveLogo(byte[] data, String contentType) {
+        SettingsEntity s = get();
+        s.setLogoData(data);
+        s.setLogoContentType(contentType != null ? contentType : "image/png");
+        return repo.save(s);
+    }
+
+    public void removeLogo() {
+        SettingsEntity s = get();
+        s.setLogoData(null);
+        s.setLogoContentType(null);
+        repo.save(s);
+    }
+
     private String str(Object o) { return o == null ? "" : o.toString(); }
 }

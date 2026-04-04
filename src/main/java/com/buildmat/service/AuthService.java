@@ -41,6 +41,12 @@ public class AuthService {
 
     @jakarta.annotation.PostConstruct
     public void seedAdmin() {
+        if (!userRepo.existsByUsername("superadmin")) {
+            userRepo.save(UserEntity.builder()
+                .username("superadmin").fullName("Super Administrator")
+                .role("SUPER_ADMIN").active(true)
+                .passwordHash(encoder.encode("superadmin123")).build());
+        }
         if (!userRepo.existsByUsername("admin")) {
             userRepo.save(UserEntity.builder()
                 .username("admin").fullName("Administrator").role("ADMIN").active(true)
