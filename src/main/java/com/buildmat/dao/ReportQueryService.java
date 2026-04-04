@@ -11,7 +11,7 @@ public class ReportQueryService {
 
     public Map<String,Object> salesSummary(String from, String to) {
         List<?> rows = em.createNativeQuery("""
-            SELECT strftime('%Y-%m', invoice_date) as period,
+            SELECT DATE_FORMAT(invoice_date,'%Y-%m') as period,
                    COUNT(*) as invoice_count,
                    SUM(subtotal) as subtotal,
                    SUM(CASE WHEN include_gst=1 THEN sgst_amount ELSE 0 END) as sgst,
@@ -43,7 +43,7 @@ public class ReportQueryService {
                    i.invoice_date, i.due_date, i.total_amount, i.paid_amount,
                    (i.total_amount - i.paid_amount) as balance_due, i.status,
                    CASE WHEN i.due_date < ?1 AND i.status <> 'PAID' THEN 'OVERDUE' ELSE 'CURRENT' END as overdue_flag,
-                   CASE WHEN i.due_date < ?2 AND i.status <> 'PAID' THEN CAST(julianday(?3)-julianday(i.due_date) AS INTEGER) ELSE 0 END as days_overdue
+                   CASE WHEN i.due_date < ?2 AND i.status <> 'PAID' THEN DATEDIFF(?3,i.due_date) ELSE 0 END as days_overdue
             FROM invoices i LEFT JOIN customers c ON i.customer_id=c.id
             WHERE i.status <> 'PAID' ORDER BY overdue_flag DESC, days_overdue DESC""")
             .setParameter(1,asOf).setParameter(2,asOf).setParameter(3,asOf).getResultList();
@@ -75,14 +75,14 @@ public class ReportQueryService {
             FROM invoice_items ii JOIN invoices inv ON ii.invoice_id=inv.id
             LEFT JOIN products p ON ii.product_id=p.id
             WHERE inv.invoice_date BETWEEN ?1 AND ?2
-            GROUP BY ii.product_name ORDER BY total_sales DESC""")
+            GROUP BY ii.product_name,p.category,ii.unit ORDER BY total_sales DESC""")
             .setParameter(1,from).setParameter(2,to).getResultList();
         return toListOfMaps(rows,"product_name","category","unit","total_qty","avg_price","total_sales","gst_collected","invoice_count");
     }
 
     public Map<String,Object> gst(String from, String to) {
         List<?> monthly = em.createNativeQuery("""
-            SELECT strftime('%Y-%m',invoice_date) as period, COUNT(*) as invoice_count,
+            SELECT DATE_FORMAT(invoice_date,'%Y-%m') as period, COUNT(*) as invoice_count,
                    SUM(subtotal) as taxable_value, SUM(sgst_amount) as sgst_amount,
                    SUM(cgst_amount) as cgst_amount, SUM(tax_amount) as total_gst,
                    SUM(total_amount) as total_with_gst
@@ -98,7 +98,7 @@ public class ReportQueryService {
             FROM invoice_items ii JOIN invoices inv ON ii.invoice_id=inv.id AND inv.include_gst=1
             LEFT JOIN products p ON ii.product_id=p.id
             WHERE inv.invoice_date BETWEEN ?1 AND ?2
-            GROUP BY ii.product_name, ii.sgst_percent, ii.cgst_percent ORDER BY taxable_value DESC""")
+            GROUP BY ii.product_name, ii.sgst_percent, ii.cgst_percent,p.category ORDER BY taxable_value DESC""")
             .setParameter(1,from).setParameter(2,to).getResultList();
         return Map.of(
             "monthly", toListOfMaps(monthly,"period","invoice_count","taxable_value","sgst_amount","cgst_amount","total_gst","total_with_gst"),
