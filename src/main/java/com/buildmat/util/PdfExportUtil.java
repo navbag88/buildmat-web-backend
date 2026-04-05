@@ -32,7 +32,7 @@ public class PdfExportUtil {
         NumberFormat fmt = NumberFormat.getCurrencyInstance(new Locale("en","IN"));
         if (fmt instanceof java.text.DecimalFormat) {
             java.text.DecimalFormatSymbols sym = ((java.text.DecimalFormat) fmt).getDecimalFormatSymbols();
-            sym.setCurrencySymbol("Rs. ");
+            sym.setCurrencySymbol("₹ ");
             ((java.text.DecimalFormat) fmt).setDecimalFormatSymbols(sym);
         }
         INR = fmt;
