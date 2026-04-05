@@ -59,7 +59,7 @@ class JwtFilter extends OncePerRequestFilter {
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtFilter jwtFilter;
-    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000}") private String allowedOrigins;
+    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://159.65.152.128:3000}") private String allowedOrigins;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
