@@ -60,7 +60,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to DigitalOcean via SSH
+      - name: Deploy setup
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.DIGITALOCEAN_HOST }}
@@ -77,7 +77,7 @@ jobs:
               newgrp docker
             fi
 
-             # Ensure Docker Compose is installed
+            # Ensure Docker Compose is installed
             if ! command -v docker-compose &> /dev/null; then
               echo "Docker Compose not found, installing..."
               sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
@@ -86,8 +86,25 @@ jobs:
             
             # Create deployment directory if it doesn't exist
             mkdir -p /var/www/buildmat-web-backend
-            
-            # Deploy application
+
+      - name: Copy docker-compose.yml to DigitalOcean
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.DIGITALOCEAN_HOST }}
+          username: ${{ secrets.DIGITALOCEAN_USER }}
+          key: ${{ secrets.DIGITALOCEAN_SSH_KEY }}
+          port: 22
+          source: "docker-compose.yml"
+          target: "/var/www/buildmat-web-backend/"
+
+      - name: Deploy application
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DIGITALOCEAN_HOST }}
+          username: ${{ secrets.DIGITALOCEAN_USER }}
+          key: ${{ secrets.DIGITALOCEAN_SSH_KEY }}
+          port: 22
+          script: |
             cd /var/www/buildmat-web-backend
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             docker-compose down
