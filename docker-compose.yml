@@ -6,7 +6,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/buildmat
+      - SPRING_DATASOURCE_URL=jdbc:mysql://dbaas-db-8513734-do-user-18444064-0.f.db.ondigitalocean.com:25060/buildmat?ssl-mode=REQUIRED
       - SPRING_DATASOURCE_USERNAME=doadmin
       - SPRING_DATASOURCE_PASSWORD=AVNS_XKupnlVA6SWGTfe-xLe
     depends_on:
