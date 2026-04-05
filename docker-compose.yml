@@ -8,7 +8,7 @@ services:
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/buildmat
       - SPRING_DATASOURCE_USERNAME=doadmin
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_DATASOURCE_PASSWORD=AVNS_XKupnlVA6SWGTfe-xLe
     depends_on:
       - db
     restart: always
@@ -16,7 +16,7 @@ services:
   db:
     image: mysql:8.0
     environment:
-      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=AVNS_XKupnlVA6SWGTfe-xLe
       - MYSQL_DATABASE=buildmat
     volumes:
       - db_data:/var/lib/mysql
