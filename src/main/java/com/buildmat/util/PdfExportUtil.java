@@ -27,16 +27,7 @@ public class PdfExportUtil {
     private static final DeviceRgb GREEN   = new DeviceRgb(22,163,74);
     private static final DeviceRgb RED     = new DeviceRgb(220,38,38);
     private static final DeviceRgb ORANGE  = new DeviceRgb(217,119,6);
-    private static final NumberFormat INR;
-    static {
-        NumberFormat fmt = NumberFormat.getCurrencyInstance(new Locale("en","IN"));
-        if (fmt instanceof java.text.DecimalFormat) {
-            java.text.DecimalFormatSymbols sym = ((java.text.DecimalFormat) fmt).getDecimalFormatSymbols();
-            sym.setCurrencySymbol("Rs. ");
-            ((java.text.DecimalFormat) fmt).setDecimalFormatSymbols(sym);
-        }
-        INR = fmt;
-    }
+    private static final NumberFormat INR  = NumberFormat.getCurrencyInstance(new Locale("en","IN"));
 
     // ── Invoice PDF ────────────────────────────────────────────────────────────
     public static byte[] generateInvoicePdf(InvoiceEntity inv, SettingsEntity settings) throws Exception {
