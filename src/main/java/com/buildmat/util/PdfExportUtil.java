@@ -75,7 +75,7 @@ public class PdfExportUtil {
         if (subLine.length()>0)     lc.add(new Paragraph(subLine.toString()).setFont(reg).setFontSize(9).setFontColor(MIDGRAY));
         if (contactLine.length()>0) lc.add(new Paragraph(contactLine.toString()).setFont(reg).setFontSize(9).setFontColor(MIDGRAY));
         Cell rc = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.RIGHT);
-        rc.add(new Paragraph("TAX INVOICE").setFont(bold).setFontSize(20).setFontColor(DARK));
+        rc.add(new Paragraph("INVOICE").setFont(bold).setFontSize(20).setFontColor(DARK));
         rc.add(new Paragraph(inv.getInvoiceNumber()).setFont(bold).setFontSize(13).setFontColor(BRAND));
         rc.add(new Paragraph("Date: "+inv.getInvoiceDate()).setFont(reg).setFontSize(9).setFontColor(MIDGRAY));
         if (inv.getDueDate()!=null) rc.add(new Paragraph("Due: "+inv.getDueDate()).setFont(reg).setFontSize(9).setFontColor(MIDGRAY));
