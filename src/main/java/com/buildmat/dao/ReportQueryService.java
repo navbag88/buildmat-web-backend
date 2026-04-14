@@ -2,9 +2,11 @@ package com.buildmat.dao;
 
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.util.*;
 
+@Slf4j
 @Service @RequiredArgsConstructor
 public class ReportQueryService {
     private final EntityManager em;
@@ -31,9 +33,10 @@ public class ReportQueryService {
                    SUM(total_amount),SUM(paid_amount),SUM(total_amount-paid_amount)
             FROM invoices WHERE invoice_date BETWEEN ?1 AND ?2""")
             .setParameter(1, from).setParameter(2, to).getResultList();
-        return Map.of("rows", toListOfMaps(rows,
-            "period","invoice_count","subtotal","sgst","cgst","total_gst","total_amount","paid_amount","outstanding"),
-            "totals", toSingleMap(totals,
+        List<Map<String,Object>> rowMaps = toListOfMaps(rows,
+            "period","invoice_count","subtotal","sgst","cgst","total_gst","total_amount","paid_amount","outstanding");
+        log.debug("salesSummary query: from={} to={} rows={}", from, to, rowMaps.size());
+        return Map.of("rows", rowMaps, "totals", toSingleMap(totals,
             "invoice_count","subtotal","sgst","cgst","total_gst","total_amount","paid_amount","outstanding"));
     }
 
@@ -47,8 +50,10 @@ public class ReportQueryService {
             FROM invoices i LEFT JOIN customers c ON i.customer_id=c.id
             WHERE i.status <> 'PAID' ORDER BY overdue_flag DESC, days_overdue DESC""")
             .setParameter(1,asOf).setParameter(2,asOf).setParameter(3,asOf).getResultList();
-        return toListOfMaps(rows,"invoice_number","customer_name","phone","invoice_date","due_date",
+        List<Map<String,Object>> result = toListOfMaps(rows,"invoice_number","customer_name","phone","invoice_date","due_date",
             "total_amount","paid_amount","balance_due","status","overdue_flag","days_overdue");
+        log.debug("outstanding query: asOf={} rows={}", asOf, result.size());
+        return result;
     }
 
     public List<Map<String,Object>> customerSales(String from, String to) {
@@ -62,7 +67,9 @@ public class ReportQueryService {
             WHERE i.invoice_date BETWEEN ?1 AND ?2
             GROUP BY i.customer_id ORDER BY total_amount DESC""")
             .setParameter(1,from).setParameter(2,to).getResultList();
-        return toListOfMaps(rows,"customer_name","phone","invoice_count","subtotal","gst_amount","total_amount","paid_amount","outstanding");
+        List<Map<String,Object>> result = toListOfMaps(rows,"customer_name","phone","invoice_count","subtotal","gst_amount","total_amount","paid_amount","outstanding");
+        log.debug("customerSales query: from={} to={} rows={}", from, to, result.size());
+        return result;
     }
 
     public List<Map<String,Object>> productSales(String from, String to) {
@@ -77,7 +84,9 @@ public class ReportQueryService {
             WHERE inv.invoice_date BETWEEN ?1 AND ?2
             GROUP BY ii.product_name,p.category,ii.unit ORDER BY total_sales DESC""")
             .setParameter(1,from).setParameter(2,to).getResultList();
-        return toListOfMaps(rows,"product_name","category","unit","total_qty","avg_price","total_sales","gst_collected","invoice_count");
+        List<Map<String,Object>> result = toListOfMaps(rows,"product_name","category","unit","total_qty","avg_price","total_sales","gst_collected","invoice_count");
+        log.debug("productSales query: from={} to={} rows={}", from, to, result.size());
+        return result;
     }
 
     public Map<String,Object> gst(String from, String to) {
@@ -100,10 +109,10 @@ public class ReportQueryService {
             WHERE inv.invoice_date BETWEEN ?1 AND ?2
             GROUP BY ii.product_name, ii.sgst_percent, ii.cgst_percent,p.category ORDER BY taxable_value DESC""")
             .setParameter(1,from).setParameter(2,to).getResultList();
-        return Map.of(
-            "monthly", toListOfMaps(monthly,"period","invoice_count","taxable_value","sgst_amount","cgst_amount","total_gst","total_with_gst"),
-            "byProduct", toListOfMaps(byProduct,"product_name","category","taxable_value","sgst_percent","cgst_percent","sgst_amount","cgst_amount","total_gst")
-        );
+        List<Map<String,Object>> monthlyMaps = toListOfMaps(monthly,"period","invoice_count","taxable_value","sgst_amount","cgst_amount","total_gst","total_with_gst");
+        List<Map<String,Object>> byProductMaps = toListOfMaps(byProduct,"product_name","category","taxable_value","sgst_percent","cgst_percent","sgst_amount","cgst_amount","total_gst");
+        log.debug("gst query: from={} to={} monthlyRows={} productRows={}", from, to, monthlyMaps.size(), byProductMaps.size());
+        return Map.of("monthly", monthlyMaps, "byProduct", byProductMaps);
     }
 
     public Map<String,Object> paymentCollection(String from, String to) {
@@ -118,10 +127,9 @@ public class ReportQueryService {
             SELECT method, COUNT(*) as cnt, SUM(amount) as total_amount
             FROM payments WHERE payment_date BETWEEN ?1 AND ?2 GROUP BY method ORDER BY total_amount DESC""")
             .setParameter(1,from).setParameter(2,to).getResultList();
-        return Map.of(
-            "rows", toListOfMaps(rows,"payment_date","invoice_number","customer_name","amount","method","reference","notes"),
-            "methodSummary", toListOfMaps(bMethod,"method","count","total_amount")
-        );
+        List<Map<String,Object>> rowMaps = toListOfMaps(rows,"payment_date","invoice_number","customer_name","amount","method","reference","notes");
+        log.debug("paymentCollection query: from={} to={} rows={}", from, to, rowMaps.size());
+        return Map.of("rows", rowMaps, "methodSummary", toListOfMaps(bMethod,"method","count","total_amount"));
     }
 
     // Helpers

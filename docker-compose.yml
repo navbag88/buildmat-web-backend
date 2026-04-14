@@ -9,6 +9,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://dbaas-db-8513734-do-user-18444064-0.f.db.ondigitalocean.com:25060/buildmat?ssl-mode=REQUIRED
       - SPRING_DATASOURCE_USERNAME=doadmin
       - SPRING_DATASOURCE_PASSWORD=AVNS_XKupnlVA6SWGTfe-xLe
+      - LOG_DIR=/mnt/volume-1776098194582/buildmat/logs
     depends_on:
       - db
     restart: always

@@ -4,6 +4,7 @@ import com.buildmat.model.*;
 import com.buildmat.repository.*;
 import com.buildmat.util.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service @RequiredArgsConstructor
 public class ProductService {
     private final ProductRepository repo;
@@ -35,10 +37,16 @@ public class ProductService {
         p.setSgstPercent(toDouble(body.getOrDefault("sgstPercent", body.getOrDefault("sgst_percent", 0))));
         p.setCgstPercent(toDouble(body.getOrDefault("cgstPercent", body.getOrDefault("cgst_percent", 0))));
         if (p.getCreatedAt() == null) p.setCreatedAt(LocalDateTime.now());
-        return toMap(repo.save(p));
+        ProductEntity saved = repo.save(p);
+        log.info("Product {}: id={} name='{}' price={} stock={}", id == null ? "created" : "updated",
+            saved.getId(), saved.getName(), saved.getPrice(), saved.getStockQty());
+        return toMap(saved);
     }
 
-    public void delete(Long id) { repo.deleteById(id); }
+    public void delete(Long id) {
+        log.info("Product deleted: id={}", id);
+        repo.deleteById(id);
+    }
 
     public Map<String,Object> importExcel(MultipartFile file) {
         try {
@@ -54,8 +62,13 @@ public class ProductService {
                 p.setCgstPercent(toDouble(row.getOrDefault("cgstPercent",0)));
                 p.setCreatedAt(LocalDateTime.now()); repo.save(p); imported++;
             }
+            log.info("Product Excel import complete: imported={} errors={}", imported, errors.size());
+            if (!errors.isEmpty()) log.warn("Product import errors: {}", errors);
             return Map.of("imported", imported, "errors", errors);
-        } catch (Exception e) { throw new RuntimeException("Import failed: " + e.getMessage()); }
+        } catch (Exception e) {
+            log.error("Product Excel import failed: {}", e.getMessage(), e);
+            throw new RuntimeException("Import failed: " + e.getMessage());
+        }
     }
 
     public ResponseEntity<byte[]> exportExcel() {

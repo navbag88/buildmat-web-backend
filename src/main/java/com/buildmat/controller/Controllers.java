@@ -1,13 +1,11 @@
 package com.buildmat.controller;
 
-import com.buildmat.model.*;
-import com.buildmat.repository.*;
-import com.buildmat.security.SecurityConfig;
 import com.buildmat.service.*;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,8 +25,14 @@ class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
-        return authService.login(body.get("username"), body.get("password"));
+    public ResponseEntity<?> login(@RequestBody Map<String, String> body,
+                                   HttpServletRequest request, HttpServletResponse response) {
+        return authService.login(body.get("username"), body.get("password"), request, response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
+        return authService.logout(request, response);
     }
 
     @GetMapping("/me")
@@ -153,6 +157,7 @@ class ReportController {
 }
 
 // ═══ User Controller (Admin only) ═════════════════════════════════════════════
+@Slf4j
 @RestController @RequestMapping("/api/users")
 @RequiredArgsConstructor
 class UserController {
@@ -164,14 +169,20 @@ class UserController {
     public ResponseEntity<?> create(@RequestBody Map<String,Object> body,
                                     org.springframework.security.core.Authentication auth) {
         try { return ResponseEntity.ok(svc.create(body, callerRole(auth))); }
-        catch (RuntimeException e) { return ResponseEntity.status(403).body(Map.of("error", e.getMessage())); }
+        catch (RuntimeException e) {
+            log.warn("User create denied: caller={} reason={}", callerRole(auth), e.getMessage());
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String,Object> body,
                                     org.springframework.security.core.Authentication auth) {
         try { return ResponseEntity.ok(svc.update(id, body, callerRole(auth))); }
-        catch (RuntimeException e) { return ResponseEntity.status(403).body(Map.of("error", e.getMessage())); }
+        catch (RuntimeException e) {
+            log.warn("User update denied: id={} caller={} reason={}", id, callerRole(auth), e.getMessage());
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}/password")
@@ -228,5 +239,27 @@ class SettingsController {
             return ResponseEntity.notFound().build();
         String ct = s.getLogoContentType() != null ? s.getLogoContentType() : "image/png";
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(ct)).body(s.getLogoData());
+    }
+}
+
+// ═══ Global Exception Handler ═════════════════════════════════════════════════
+@Slf4j
+@RestControllerAdvice
+class GlobalExceptionHandler {
+
+    /** Catches any unhandled exception and logs the full stack trace. */
+    @org.springframework.web.bind.annotation.ExceptionHandler(Exception.class)
+    public ResponseEntity<?> handleAll(Exception e, HttpServletRequest request) {
+        log.error("Unhandled exception [{} {}]: {}", request.getMethod(), request.getRequestURI(), e.getMessage(), e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(Map.of("error", "Internal server error"));
+    }
+
+    /** 404 — entity not found (thrown by orElseThrow() in services). */
+    @org.springframework.web.bind.annotation.ExceptionHandler(java.util.NoSuchElementException.class)
+    public ResponseEntity<?> handleNotFound(java.util.NoSuchElementException e, HttpServletRequest request) {
+        log.warn("Resource not found [{} {}]: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", "Resource not found"));
     }
 }

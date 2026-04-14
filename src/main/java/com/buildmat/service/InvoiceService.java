@@ -4,6 +4,7 @@ import com.buildmat.model.*;
 import com.buildmat.repository.*;
 import com.buildmat.util.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service @RequiredArgsConstructor @Transactional
 public class InvoiceService {
     private final InvoiceRepository invoiceRepo;
@@ -53,7 +55,16 @@ public class InvoiceService {
             }
         }
         recalculate(inv);
-        return toMap(invoiceRepo.save(inv));
+        InvoiceEntity saved = invoiceRepo.save(inv);
+        if (id == null)
+            log.info("Invoice created: number={} customer='{}' total={} status={}",
+                saved.getInvoiceNumber(), saved.getCustomer() != null ? saved.getCustomer().getName() : "N/A",
+                saved.getTotalAmount(), saved.getStatus());
+        else
+            log.info("Invoice updated: number={} customer='{}' total={} status={}",
+                saved.getInvoiceNumber(), saved.getCustomer() != null ? saved.getCustomer().getName() : "N/A",
+                saved.getTotalAmount(), saved.getStatus());
+        return toMap(saved);
     }
 
     private void recalculate(InvoiceEntity inv) {
@@ -81,28 +92,46 @@ public class InvoiceService {
     }
 
     public Map<String,Object> getById(Long id) { return invoiceRepo.findById(id).map(this::toFullMap).orElseThrow(); }
-    public void delete(Long id) { invoiceRepo.deleteById(id); }
+    public void delete(Long id) {
+        log.info("Invoice deleted: id={}", id);
+        invoiceRepo.deleteById(id);
+    }
 
     public ResponseEntity<byte[]> generatePdf(Long id) {
-        try { InvoiceEntity inv = invoiceRepo.findById(id).orElseThrow();
+        try {
+            InvoiceEntity inv = invoiceRepo.findById(id).orElseThrow();
+            log.debug("PDF generated for invoice: number={}", inv.getInvoiceNumber());
             byte[] pdf = PdfExportUtil.generateInvoicePdf(inv, settingsService.get());
             return ResponseEntity.ok().header("Content-Disposition","attachment; filename="+inv.getInvoiceNumber()+".pdf")
-                .contentType(MediaType.APPLICATION_PDF).body(pdf); }
-        catch (Exception e) { throw new RuntimeException(e); }
+                .contentType(MediaType.APPLICATION_PDF).body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for invoice id={}: {}", id, e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
     }
 
     public ResponseEntity<byte[]> exportExcel() {
-        try { byte[] d = ExcelExportUtil.exportInvoices(invoiceRepo.findByOrderByInvoiceDateDescIdDesc());
+        try {
+            byte[] d = ExcelExportUtil.exportInvoices(invoiceRepo.findByOrderByInvoiceDateDescIdDesc());
+            log.debug("Invoices exported to Excel");
             return ResponseEntity.ok().header("Content-Disposition","attachment; filename=invoices.xlsx")
-                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).body(d); }
-        catch (Exception e) { throw new RuntimeException(e); }
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).body(d);
+        } catch (Exception e) {
+            log.error("Invoice Excel export failed: {}", e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
     }
 
     public ResponseEntity<byte[]> exportPdf() {
-        try { byte[] d = PdfExportUtil.exportInvoices(invoiceRepo.findByOrderByInvoiceDateDescIdDesc(), settingsService.get().getBusinessName());
+        try {
+            byte[] d = PdfExportUtil.exportInvoices(invoiceRepo.findByOrderByInvoiceDateDescIdDesc(), settingsService.get().getBusinessName());
+            log.debug("Invoices exported to PDF");
             return ResponseEntity.ok().header("Content-Disposition","attachment; filename=invoices.pdf")
-                .contentType(MediaType.APPLICATION_PDF).body(d); }
-        catch (Exception e) { throw new RuntimeException(e); }
+                .contentType(MediaType.APPLICATION_PDF).body(d);
+        } catch (Exception e) {
+            log.error("Invoice PDF export failed: {}", e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
     }
 
     private String generateNumber() {

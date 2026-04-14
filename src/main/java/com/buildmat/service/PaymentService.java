@@ -4,6 +4,7 @@ import com.buildmat.model.*;
 import com.buildmat.repository.*;
 import com.buildmat.util.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service @RequiredArgsConstructor @Transactional
 public class PaymentService {
     private final PaymentRepository paymentRepo;
@@ -39,14 +41,18 @@ public class PaymentService {
         p.setCreatedAt(LocalDateTime.now());
         PaymentEntity saved = paymentRepo.save(p);
         updateInvoiceStatus(inv);
+        log.info("Payment recorded: id={} invoice={} amount={} method={} invoiceStatus={}",
+            saved.getId(), inv.getInvoiceNumber(), saved.getAmount(), saved.getMethod(), inv.getStatus());
         return toMap(saved);
     }
 
     public void delete(Long id) {
         paymentRepo.findById(id).ifPresent(p -> {
             InvoiceEntity inv = p.getInvoice();
+            log.info("Payment deleted: id={} invoice={} amount={}", id, inv.getInvoiceNumber(), p.getAmount());
             paymentRepo.deleteById(id);
             updateInvoiceStatus(inv);
+            log.info("Invoice status after payment deletion: invoice={} newStatus={}", inv.getInvoiceNumber(), inv.getStatus());
         });
     }
 
@@ -60,17 +66,27 @@ public class PaymentService {
     }
 
     public ResponseEntity<byte[]> exportExcel() {
-        try { byte[] d = ExcelExportUtil.exportPayments(paymentRepo.findByOrderByPaymentDateDescIdDesc());
+        try {
+            byte[] d = ExcelExportUtil.exportPayments(paymentRepo.findByOrderByPaymentDateDescIdDesc());
+            log.debug("Payments exported to Excel");
             return ResponseEntity.ok().header("Content-Disposition","attachment; filename=payments.xlsx")
-                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).body(d); }
-        catch (Exception e) { throw new RuntimeException(e); }
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).body(d);
+        } catch (Exception e) {
+            log.error("Payment Excel export failed: {}", e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
     }
 
     public ResponseEntity<byte[]> exportPdf() {
-        try { byte[] d = PdfExportUtil.exportPayments(paymentRepo.findByOrderByPaymentDateDescIdDesc(), settingsService.get().getBusinessName());
+        try {
+            byte[] d = PdfExportUtil.exportPayments(paymentRepo.findByOrderByPaymentDateDescIdDesc(), settingsService.get().getBusinessName());
+            log.debug("Payments exported to PDF");
             return ResponseEntity.ok().header("Content-Disposition","attachment; filename=payments.pdf")
-                .contentType(MediaType.APPLICATION_PDF).body(d); }
-        catch (Exception e) { throw new RuntimeException(e); }
+                .contentType(MediaType.APPLICATION_PDF).body(d);
+        } catch (Exception e) {
+            log.error("Payment PDF export failed: {}", e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
     }
 
     private Map<String,Object> toMap(PaymentEntity p) {

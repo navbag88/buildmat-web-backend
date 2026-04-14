@@ -4,6 +4,7 @@ import com.buildmat.model.*;
 import com.buildmat.repository.*;
 import com.buildmat.util.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service @RequiredArgsConstructor
 public class CustomerService {
     private final CustomerRepository repo;
@@ -34,10 +36,15 @@ public class CustomerService {
         c.setEmail((String)body.getOrDefault("email",""));
         c.setAddress((String)body.getOrDefault("address",""));
         if (c.getCreatedAt() == null) c.setCreatedAt(LocalDateTime.now());
-        return toMap(repo.save(c));
+        CustomerEntity saved = repo.save(c);
+        log.info("Customer {}: id={} name='{}'", id == null ? "created" : "updated", saved.getId(), saved.getName());
+        return toMap(saved);
     }
 
-    public void delete(Long id) { repo.deleteById(id); }
+    public void delete(Long id) {
+        log.info("Customer deleted: id={}", id);
+        repo.deleteById(id);
+    }
 
     public Map<String,Object> importExcel(MultipartFile file) {
         try {
@@ -51,8 +58,13 @@ public class CustomerService {
                 c.setEmail((String)row.getOrDefault("email","")); c.setAddress((String)row.getOrDefault("address",""));
                 c.setCreatedAt(LocalDateTime.now()); repo.save(c); imported++;
             }
+            log.info("Customer Excel import complete: imported={} errors={}", imported, errors.size());
+            if (!errors.isEmpty()) log.warn("Customer import errors: {}", errors);
             return Map.of("imported", imported, "errors", errors);
-        } catch (Exception e) { throw new RuntimeException("Import failed: " + e.getMessage()); }
+        } catch (Exception e) {
+            log.error("Customer Excel import failed: {}", e.getMessage(), e);
+            throw new RuntimeException("Import failed: " + e.getMessage());
+        }
     }
 
     public ResponseEntity<byte[]> exportExcel() {
