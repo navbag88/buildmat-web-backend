@@ -63,7 +63,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy setup
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DIGITALOCEAN_HOST }}
           username: ${{ secrets.DIGITALOCEAN_USER }}
@@ -90,7 +90,7 @@ jobs:
             mkdir -p /var/www/buildmat-web-backend
 
       - name: Copy docker-compose.yml to DigitalOcean
-        uses: appleboy/scp-action@master
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DIGITALOCEAN_HOST }}
           username: ${{ secrets.DIGITALOCEAN_USER }}
@@ -100,7 +100,7 @@ jobs:
           target: "/var/www/buildmat-web-backend/"
 
       - name: Deploy application
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.0.3
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_ACTOR: ${{ github.actor }}
