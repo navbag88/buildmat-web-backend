@@ -55,6 +55,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      packages: read
 
     steps:
       - name: Checkout code
@@ -83,7 +85,7 @@ jobs:
               sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
               sudo chmod +x /usr/local/bin/docker-compose
             fi
-            
+
             # Create deployment directory if it doesn't exist
             mkdir -p /var/www/buildmat-web-backend
 
@@ -99,15 +101,24 @@ jobs:
 
       - name: Deploy application
         uses: appleboy/ssh-action@master
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_ACTOR: ${{ github.actor }}
+          DEPLOY_SHA: ${{ github.sha }}
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
         with:
           host: ${{ secrets.DIGITALOCEAN_HOST }}
           username: ${{ secrets.DIGITALOCEAN_USER }}
           key: ${{ secrets.DIGITALOCEAN_SSH_KEY }}
           port: 22
+          envs: GHCR_TOKEN,GHCR_ACTOR,DEPLOY_SHA,REGISTRY,IMAGE_NAME
           script: |
             cd /var/www/buildmat-web-backend
-            export GITHUB_SHA=${{ github.sha }}
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_ACTOR" --password-stdin
+            docker pull "$REGISTRY/$IMAGE_NAME:$DEPLOY_SHA"
+            export GITHUB_SHA="$DEPLOY_SHA"
             docker-compose down
             docker-compose up -d
+            docker logout ghcr.io
             echo "Deployment successful!"
