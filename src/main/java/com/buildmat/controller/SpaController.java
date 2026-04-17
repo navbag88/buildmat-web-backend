@@ -21,6 +21,9 @@ public class SpaController {
     /** Serve index.html at the application root. */
     @GetMapping(value = "/")
     public ResponseEntity<Resource> root() {
+        if (!INDEX_HTML.exists()) {
+            return ResponseEntity.notFound().build();
+        }
         return ResponseEntity.ok()
                 .body(INDEX_HTML);
     }
@@ -42,6 +45,9 @@ public class SpaController {
     @GetMapping(value = {"/{path:^[^.]*}", "/{path:^[^.]*}/**"},
                 produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<Resource> spa() {
+        if (!INDEX_HTML.exists()) {
+            return ResponseEntity.notFound().build();
+        }
         return ResponseEntity.ok()
                 .contentType(MediaType.TEXT_HTML)
                 .body(INDEX_HTML);
