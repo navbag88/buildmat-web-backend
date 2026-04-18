@@ -10,6 +10,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=doadmin
       - SPRING_DATASOURCE_PASSWORD=AVNS_XKupnlVA6SWGTfe-xLe
       - LOG_DIR=/mnt/volume-1776098194582/buildmat/logs
+      - FRONTEND_URL=http://139.59.46.39:8090,http://159.65.152.128:3000
     depends_on:
       - db
     restart: always

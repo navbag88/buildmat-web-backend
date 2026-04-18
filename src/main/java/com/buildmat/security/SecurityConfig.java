@@ -12,6 +12,7 @@ import org.springframework.security.authentication.*;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -82,7 +83,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(c -> c.disable())
+            .csrf(AbstractHttpConfigurer::disable)
             .cors(c -> c.configurationSource(corsConfig()))
             // Spring's built-in HTTP session is not used; our DB sessions manage state
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
