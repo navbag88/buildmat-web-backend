@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
+import java.util.Map;
 
 // ═══ Health Controller ════════════════════════════════════════════════════════
 @RestController
@@ -240,6 +241,42 @@ class SettingsController {
         String ct = s.getLogoContentType() != null ? s.getLogoContentType() : "image/png";
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(ct)).body(s.getLogoData());
     }
+}
+
+// ═══ Supplier Controller ══════════════════════════════════════════════════════
+@RestController @RequestMapping("/api/suppliers")
+@RequiredArgsConstructor
+class SupplierController {
+    private final SupplierService svc;
+
+    @GetMapping    public ResponseEntity<?> getAll(@RequestParam(required=false) String q) { return ResponseEntity.ok(svc.getAll(q)); }
+    @GetMapping("/{id}") public ResponseEntity<?> getById(@PathVariable Long id) { return ResponseEntity.ok(svc.getById(id)); }
+    @PostMapping   public ResponseEntity<?> create(@RequestBody Map<String,Object> body) { return ResponseEntity.ok(svc.save(null, body)); }
+    @PutMapping("/{id}") public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String,Object> body) { return ResponseEntity.ok(svc.save(id, body)); }
+    @DeleteMapping("/{id}") public ResponseEntity<?> delete(@PathVariable Long id) { svc.delete(id); return ResponseEntity.ok(Map.of("ok",true)); }
+
+    @GetMapping("/export/excel") public ResponseEntity<byte[]> exportExcel() { return svc.exportExcel(); }
+    @GetMapping("/export/pdf")   public ResponseEntity<byte[]> exportPdf()   { return svc.exportPdf(); }
+}
+
+// ═══ Purchase Controller ═══════════════════════════════════════════════════════
+@RestController @RequestMapping("/api/purchases")
+@RequiredArgsConstructor
+class PurchaseController {
+    private final PurchaseService svc;
+
+    @GetMapping    public ResponseEntity<?> getAll(@RequestParam(required=false) String q) { return ResponseEntity.ok(svc.getAll(q)); }
+    @GetMapping("/{id}") public ResponseEntity<?> getById(@PathVariable Long id) { return ResponseEntity.ok(svc.getById(id)); }
+    @PostMapping   public ResponseEntity<?> create(@RequestBody Map<String,Object> body) { return ResponseEntity.ok(svc.save(null, body)); }
+    @PutMapping("/{id}") public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String,Object> body) { return ResponseEntity.ok(svc.save(id, body)); }
+    @DeleteMapping("/{id}") public ResponseEntity<?> delete(@PathVariable Long id) { svc.delete(id); return ResponseEntity.ok(Map.of("ok",true)); }
+
+    @GetMapping("/{id}/payments")  public ResponseEntity<?> getPayments(@PathVariable Long id) { return ResponseEntity.ok(svc.getPayments(id)); }
+    @PostMapping("/{id}/payments") public ResponseEntity<?> addPayment(@PathVariable Long id, @RequestBody Map<String,Object> body) { return ResponseEntity.ok(svc.addPayment(id, body)); }
+    @DeleteMapping("/payments/{paymentId}") public ResponseEntity<?> deletePayment(@PathVariable Long paymentId) { svc.deletePayment(paymentId); return ResponseEntity.ok(Map.of("ok",true)); }
+
+    @GetMapping("/export/excel") public ResponseEntity<byte[]> exportExcel() { return svc.exportExcel(); }
+    @GetMapping("/export/pdf")   public ResponseEntity<byte[]> exportPdf()   { return svc.exportPdf(); }
 }
 
 // ═══ Global Exception Handler ═════════════════════════════════════════════════

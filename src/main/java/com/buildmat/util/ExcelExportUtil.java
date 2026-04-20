@@ -10,7 +10,8 @@ import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class ExcelExportUtil {
+public class
+ExcelExportUtil {
 
     // ── Customers ──────────────────────────────────────────────────────────────
     public static byte[] exportCustomers(List<CustomerEntity> list) throws Exception {
@@ -25,6 +26,24 @@ public class ExcelExportUtil {
                 strRow(r, st, String.valueOf(c.getId()), c.getName(), nvl(c.getPhone()), nvl(c.getEmail()), nvl(c.getAddress()));
             }
             strRow(s.createRow(list.size()+3), tot, "Total", String.valueOf(list.size()),"","","");
+            return toBytes(wb);
+        }
+    }
+
+    // ── Suppliers ─────────────────────────────────────────────────────────────
+    public static byte[] exportSuppliers(List<SupplierEntity> list) throws Exception {
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            Sheet s = wb.createSheet("Suppliers");
+            CellStyle hdr = hdrStyle(wb), def = wb.createCellStyle(), alt = altStyle(wb), tot = totStyle(wb);
+            addTitle(s, wb, "Suppliers — Total: " + list.size(), 7);
+            hdrRow(s.createRow(2), hdr, "ID","Name","Phone","Email","GSTIN","Contact Person","Address");
+            setColWidths(s, 2000, 7000, 4500, 6000, 4000, 5000, 9000);
+            for (int i=0; i<list.size(); i++) {
+                SupplierEntity sup = list.get(i); Row r = s.createRow(i+3); CellStyle st = i%2==0?alt:def;
+                strRow(r, st, String.valueOf(sup.getId()), sup.getName(), nvl(sup.getPhone()), nvl(sup.getEmail()),
+                    nvl(sup.getGstin()), nvl(sup.getContactPerson()), nvl(sup.getAddress()));
+            }
+            strRow(s.createRow(list.size()+3), tot, "Total", String.valueOf(list.size()),"","","","","");
             return toBytes(wb);
         }
     }
@@ -90,6 +109,38 @@ public class ExcelExportUtil {
             }
             Row tr = s.createRow(list.size()+3); strCells(tr,tot,0,"TOTAL","","");
             numCells(tr, totNumStyle(wb), 3, total);
+            return toBytes(wb);
+        }
+    }
+
+    // ── Purchases ──────────────────────────────────────────────────────────────
+    public static byte[] exportPurchases(List<com.buildmat.model.PurchaseEntity> list) throws Exception {
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            Sheet s = wb.createSheet("Purchases");
+            CellStyle hdr = hdrStyle(wb), def = wb.createCellStyle(), alt = altStyle(wb), tot = totStyle(wb),
+                num = numStyle(wb), numAlt = numAltStyle(wb);
+            addTitle(s, wb, "Purchases — Total: " + list.size(), 11);
+            hdrRow(s.createRow(2), hdr, "PO #","Supplier","Supplier Inv Ref","Date","Due Date","Subtotal","GST","Total","Paid","Balance","Status");
+            setColWidths(s, 4500, 6000, 5000, 3500, 3500, 4000, 4000, 4500, 4000, 4000, 3500);
+            double subT = 0, gstT = 0, totT = 0, paidT = 0, balT = 0;
+            for (int i = 0; i < list.size(); i++) {
+                com.buildmat.model.PurchaseEntity po = list.get(i);
+                Row r = s.createRow(i + 3);
+                CellStyle st = i % 2 == 0 ? alt : def; CellStyle ns = i % 2 == 0 ? numAlt : num;
+                strCells(r, st, 0, po.getPurchaseNumber(),
+                    po.getSupplier() != null ? po.getSupplier().getName() : "",
+                    nvl(po.getSupplierInvoiceRef()),
+                    po.getPurchaseDate().toString(),
+                    po.getDueDate() != null ? po.getDueDate().toString() : "");
+                double gst = Boolean.TRUE.equals(po.getIncludeGst()) ? po.getTaxAmount() : 0;
+                double bal = po.getTotalAmount() - po.getPaidAmount();
+                numCells(r, ns, 5, po.getSubtotal(), gst, po.getTotalAmount(), po.getPaidAmount(), bal);
+                strCell(r, 10, po.getStatus(), st);
+                subT += po.getSubtotal(); gstT += gst; totT += po.getTotalAmount(); paidT += po.getPaidAmount(); balT += bal;
+            }
+            Row tr = s.createRow(list.size() + 3);
+            strCells(tr, tot, 0, "TOTAL", String.valueOf(list.size()), "", "", "");
+            numCells(tr, totNumStyle(wb), 5, subT, gstT, totT, paidT, balT);
             return toBytes(wb);
         }
     }

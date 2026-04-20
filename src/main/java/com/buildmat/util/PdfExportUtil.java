@@ -149,6 +149,14 @@ public class PdfExportUtil {
             list.stream().map(c -> new String[]{c.getId().toString(),c.getName(),nvl(c.getPhone()),nvl(c.getEmail()),nvl(c.getAddress())}).collect(Collectors.toList()));
     }
 
+    public static byte[] exportSuppliers(java.util.List<SupplierEntity> list, String bizName) throws Exception {
+        return simpleListPdf(bizName, "Suppliers", "Total: "+list.size(), false,
+            new String[]{"#","Name","Phone","Email","GSTIN","Contact Person","Address"},
+            new float[]{5,20,13,20,13,14,15},
+            list.stream().map(s -> new String[]{s.getId().toString(),s.getName(),nvl(s.getPhone()),nvl(s.getEmail()),
+                nvl(s.getGstin()),nvl(s.getContactPerson()),nvl(s.getAddress())}).collect(Collectors.toList()));
+    }
+
     public static byte[] exportProducts(java.util.List<ProductEntity> list, String bizName) throws Exception {
         return simpleListPdf(bizName, "Products", "Total: "+list.size(), true,
             new String[]{"#","Name","Category","Unit","Price","Stock","SGST%","CGST%"},
@@ -173,6 +181,21 @@ public class PdfExportUtil {
             list.stream().map(p -> new String[]{p.getPaymentDate().toString(),
                 p.getInvoice().getInvoiceNumber(),p.getInvoice().getCustomer()!=null?p.getInvoice().getCustomer().getName():"",
                 INR.format(p.getAmount()),nvl(p.getMethod()),nvl(p.getReference())}).collect(Collectors.toList()));
+    }
+
+    public static byte[] exportPurchases(java.util.List<PurchaseEntity> list, String bizName) throws Exception {
+        return simpleListPdf(bizName, "Purchases", "Total: "+list.size(), true,
+            new String[]{"Purchase #","Supplier","Date","Subtotal","GST","Total","Paid","Balance","Status"},
+            new float[]{14,20,10,13,11,13,12,13,8},
+            list.stream().map(p -> new String[]{p.getPurchaseNumber(),
+                p.getSupplier()!=null?p.getSupplier().getName():"",
+                p.getPurchaseDate().toString(),
+                INR.format(p.getSubtotal()),
+                INR.format(p.getIncludeGst()?p.getTaxAmount():0),
+                INR.format(p.getTotalAmount()),
+                INR.format(p.getPaidAmount()),
+                INR.format(p.getTotalAmount()-p.getPaidAmount()),
+                p.getStatus()}).collect(Collectors.toList()));
     }
 
     public static byte[] exportReport(String type, String from, String to, String asOf, ReportQueryService q, String bizName) throws Exception {
