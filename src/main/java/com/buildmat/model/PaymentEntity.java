@@ -1,6 +1,8 @@
 package com.buildmat.model;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -8,7 +10,7 @@ import java.time.LocalDateTime;
 @Data @NoArgsConstructor @AllArgsConstructor @Builder
 public class PaymentEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "invoice_id") private InvoiceEntity invoice;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "invoice_id") @NotFound(action = NotFoundAction.IGNORE) private InvoiceEntity invoice;
     @Column(nullable = false) private Double amount;
     @Column(nullable = false) private LocalDate paymentDate;
     @Builder.Default private String method = "CASH";

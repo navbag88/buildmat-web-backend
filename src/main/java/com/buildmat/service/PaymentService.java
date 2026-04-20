@@ -31,7 +31,7 @@ public class PaymentService {
 
     public Map<String,Object> save(Map<String,Object> body) {
         Long invoiceId = toLong(body.get("invoiceId"));
-        InvoiceEntity inv = invoiceRepo.findById(invoiceId).orElseThrow();
+        InvoiceEntity inv = (invoiceId != null) ? invoiceRepo.findById(invoiceId).orElse(null) : null;
         PaymentEntity p = new PaymentEntity();
         p.setInvoice(inv); p.setAmount(toDouble(body.get("amount")));
         p.setPaymentDate(LocalDate.parse((String)body.get("paymentDate")));
@@ -40,19 +40,29 @@ public class PaymentService {
         p.setNotes((String)body.getOrDefault("notes",""));
         p.setCreatedAt(LocalDateTime.now());
         PaymentEntity saved = paymentRepo.save(p);
-        updateInvoiceStatus(inv);
-        log.info("Payment recorded: id={} invoice={} amount={} method={} invoiceStatus={}",
-            saved.getId(), inv.getInvoiceNumber(), saved.getAmount(), saved.getMethod(), inv.getStatus());
+        if (inv != null) {
+            updateInvoiceStatus(inv);
+            log.info("Payment recorded: id={} invoice={} amount={} method={} invoiceStatus={}",
+                saved.getId(), inv.getInvoiceNumber(), saved.getAmount(), saved.getMethod(), inv.getStatus());
+        } else {
+            log.info("Payment recorded: id={} amount={} method={} (no invoice)",
+                saved.getId(), saved.getAmount(), saved.getMethod());
+        }
         return toMap(saved);
     }
 
     public void delete(Long id) {
         paymentRepo.findById(id).ifPresent(p -> {
             InvoiceEntity inv = p.getInvoice();
-            log.info("Payment deleted: id={} invoice={} amount={}", id, inv.getInvoiceNumber(), p.getAmount());
-            paymentRepo.deleteById(id);
-            updateInvoiceStatus(inv);
-            log.info("Invoice status after payment deletion: invoice={} newStatus={}", inv.getInvoiceNumber(), inv.getStatus());
+            if (inv != null) {
+                log.info("Payment deleted: id={} invoice={} amount={}", id, inv.getInvoiceNumber(), p.getAmount());
+                paymentRepo.deleteById(id);
+                updateInvoiceStatus(inv);
+                log.info("Invoice status after payment deletion: invoice={} newStatus={}", inv.getInvoiceNumber(), inv.getStatus());
+            } else {
+                log.info("Payment deleted: id={} amount={} (no invoice)", id, p.getAmount());
+                paymentRepo.deleteById(id);
+            }
         });
     }
 
@@ -90,11 +100,17 @@ public class PaymentService {
     }
 
     private Map<String,Object> toMap(PaymentEntity p) {
-        return Map.of("id",p.getId(),"invoiceId",p.getInvoice().getId(),
-            "invoiceNumber",p.getInvoice().getInvoiceNumber(),
-            "customerName",p.getInvoice().getCustomer()!=null?p.getInvoice().getCustomer().getName():"",
-            "amount",p.getAmount(),"paymentDate",p.getPaymentDate(),
-            "method",p.getMethod(),"reference",nvl(p.getReference()),"notes",nvl(p.getNotes()));
+        Map<String,Object> m = new HashMap<>();
+        m.put("id", p.getId());
+        m.put("invoiceId", p.getInvoice() != null ? p.getInvoice().getId() : null);
+        m.put("invoiceNumber", p.getInvoice() != null ? p.getInvoice().getInvoiceNumber() : "");
+        m.put("customerName", p.getInvoice() != null && p.getInvoice().getCustomer() != null ? p.getInvoice().getCustomer().getName() : "");
+        m.put("amount", p.getAmount());
+        m.put("paymentDate", p.getPaymentDate());
+        m.put("method", p.getMethod());
+        m.put("reference", nvl(p.getReference()));
+        m.put("notes", nvl(p.getNotes()));
+        return m;
     }
 
     double toDouble(Object o) { if(o instanceof Number) return ((Number)o).doubleValue(); try{return Double.parseDouble(o.toString());}catch(Exception e){return 0;} }
