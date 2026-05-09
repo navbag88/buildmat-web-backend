@@ -87,21 +87,20 @@ public class SecurityConfig {
             .cors(c -> c.configurationSource(corsConfig()))
             // Spring's built-in HTTP session is not used; our DB sessions manage state
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(a -> a
-                        .requestMatchers("/api/health").permitAll()
-                        .requestMatchers("/api/auth/login").permitAll()
-                        .requestMatchers("/h2-console/**").permitAll()
-                        .requestMatchers("/", "/index.html").permitAll()
-                        .requestMatchers("/static/**").permitAll()
-                        .requestMatchers("/public/**").permitAll()
-                        .requestMatchers("/assets/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/**").permitAll()
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .anyRequest().authenticated()
+            .authorizeHttpRequests(a -> a
+                .requestMatchers("/api/health").permitAll()
+                .requestMatchers("/api/auth/login").permitAll()
+                .requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers("/", "/index.html").permitAll()
+                .requestMatchers("/static/**").permitAll()
+                .requestMatchers("/public/**").permitAll()
+                .requestMatchers("/assets/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/**").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .anyRequest().authenticated()
             )
             .headers(h -> h.frameOptions(f -> f.disable()))
-            .addFilterBefore(sessionFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(sessionFilter, AuthenticationFilter.class);
         return http.build();
     }
 
