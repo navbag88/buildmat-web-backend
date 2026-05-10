@@ -100,6 +100,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .headers(h -> h.frameOptions(f -> f.disable()))
+            .addFilterAt(new AuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(sessionFilter, AuthenticationFilter.class);
         return http.build();
     }
