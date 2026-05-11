@@ -96,12 +96,14 @@ public class SecurityConfig {
                 .requestMatchers("/public/**").permitAll()
                 .requestMatchers("/assets/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/**").permitAll()
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/**").permitAll()
+                    .requestMatchers(HttpMethod.DELETE, "/**").permitAll()
+                    .requestMatchers(HttpMethod.PUT, "/**").permitAll()
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .anyRequest().authenticated()
             )
             .headers(h -> h.frameOptions(f -> f.disable()))
-            .addFilterAt(new AuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(sessionFilter, AuthenticationFilter.class);
+            .addFilterBefore(sessionFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
